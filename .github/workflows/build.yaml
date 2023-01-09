@@ -1,0 +1,93 @@
+name: Build and push
+
+on:
+  push:
+    branches:
+      - main
+    schedule:
+     - cron: '12 23 3 * *'
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY_USERNAME: thexaf
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout current repo
+        uses: actions/checkout@v3
+
+      - name: Prepare environment
+        run: |
+          # Prepare image name
+          IMAGE_NAME=$(echo "${{ env.IMAGE_NAME }}" | sed 's@/docker-@/@g')
+          IMAGE_NAME="${{ env.REGISTRY_USERNAME }}/${IMAGE_NAME#*/}"
+          echo "IMAGE_NAME=${IMAGE_NAME}" | tee -a "$GITHUB_ENV"
+
+          # Add remote
+          REMOTE=gitlab
+          echo "REMOTE=${REMOTE}" | tee -a "$GITHUB_ENV"
+
+          #git config --global url.https://github.com/.insteadOf git://github.com/
+          git remote add $REMOTE https://gitlab.com/hydroqc/hydroqc2mqtt
+
+          # Compute version
+          VERSION=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags $REMOTE '*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
+          echo "VERSION=${VERSION}" | tee -a "$GITHUB_ENV"
+
+          # Fetch the required tag and checkout the branch
+          git fetch $REMOTE refs/tags/$VERSION:refs/tags/$VERSION
+          git checkout $VERSION
+
+          # Replace the Dockerfile by the one we have in the branch
+          # git show main:Dockerfile > Dockerfile
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern={{version}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}},value=${{ env.VERSION }}
+          images: ${{ env.IMAGE_NAME }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: |
+            linux/amd64
+            linux/386
+            linux/arm64
+            linux/arm/v7
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: HYDROQC2MQTT_VERSION=${{ env.VERSION }}
