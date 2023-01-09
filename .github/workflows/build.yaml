@@ -1,11 +1,12 @@
 name: Build and push
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-    schedule:
-     - cron: '12 23 3 * *'
+  schedule:
+    - cron: '12 23 * * *'
 
 concurrency:
   group: ${{ github.workflow }}
@@ -14,44 +15,85 @@ concurrency:
 env:
   REGISTRY_USERNAME: thexaf
   IMAGE_NAME: ${{ github.repository }}
+  REMOTE_REPOSITORY: https://gitlab.com/hydroqc/hydroqc2mqtt
 
 jobs:
-  build-and-push:
-    name: Build and push
+  prepare-environment:
+    name: Prepare environment
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      packages: write
+    outputs:
+      image_name: ${{ env.IMAGE_NAME }}
+      version: ${{ env.VERSION }}
+      build: ${{ env.BUILD }}
 
     steps:
-      - name: Checkout current repo
-        uses: actions/checkout@v3
-
-      - name: Prepare environment
+      - name: Prepare image name
         run: |
           # Prepare image name
           IMAGE_NAME=$(echo "${{ env.IMAGE_NAME }}" | sed 's@/docker-@/@g')
           IMAGE_NAME="${{ env.REGISTRY_USERNAME }}/${IMAGE_NAME#*/}"
           echo "IMAGE_NAME=${IMAGE_NAME}" | tee -a "$GITHUB_ENV"
 
-          # Add remote
-          REMOTE=gitlab
-          echo "REMOTE=${REMOTE}" | tee -a "$GITHUB_ENV"
+      - name: Find version to build
+        run: |
+          git init >/dev/null 2>&1
+          git remote add source "${{ env.REMOTE_REPOSITORY }}" >/dev/null 2>&1
+          VERSION=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags source '*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
 
-          #git config --global url.https://github.com/.insteadOf git://github.com/
-          git remote add $REMOTE https://gitlab.com/hydroqc/hydroqc2mqtt
+          if [ -z "$VERSION" ]; then
+            echo "Unable to find version"
+            exit 1
+          fi
 
-          # Compute version
-          VERSION=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags $REMOTE '*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
           echo "VERSION=${VERSION}" | tee -a "$GITHUB_ENV"
 
-          # Fetch the required tag and checkout the branch
-          git fetch $REMOTE refs/tags/$VERSION:refs/tags/$VERSION
-          git checkout $VERSION
+      - name: Check if version already has been built in the last month
+        run: |
+          BUILD='true'
+          VERSION_DATETIME=$(curl -s https://registry.hub.docker.com/v2/repositories/thexaf/hydroqc2mqtt/tags | \
+            jq -r '.results | map(select(.name == "${{ env.VERSION }}")) | map(.tag_last_pushed) | .[]')
 
-          # Replace the Dockerfile by the one we have in the branch
-          # git show main:Dockerfile > Dockerfile
+          if [ -n "$VERSION_DATETIME" ]; then
+            echo "Version was previously pushed at ${VERSION_DATETIME}"
+
+            EXPIRE_AFTER=$((60 * 60 * 24 * 30))
+            VERSION_TIMESTAMP=$(date -d "${VERSION_DATETIME}" +%s)
+            NOW_TIMESTAMP=$(date +%s)
+
+            if [ $(($NOW_TIMESTAMP - $VERSION_TIMESTAMP)) -le $EXPIRE_AFTER ]; then
+              BUILD='false'
+            fi
+          fi
+
+          echo "BUILD=${BUILD}" | tee -a "$GITHUB_ENV"
+
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+
+    needs:
+      - prepare-environment
+
+    if: needs.prepare-environment.outputs.build == 'true'
+
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      IMAGE_NAME: ${{ needs.prepare-environment.outputs.image_name }}
+      VERSION: ${{ needs.prepare-environment.outputs.version }}
+
+    steps:
+      - name: Checkout current repo
+        uses: actions/checkout@v3
+
+      - name: Checkout version from source
+        run: |
+          git remote add source "${{ env.REMOTE_REPOSITORY }}"
+          git fetch source refs/tags/${{ env.VERSION }}:refs/tags/${{ env.VERSION }}
+          git checkout ${{ env.VERSION }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
