@@ -2,6 +2,10 @@ name: Build and push
 
 on:
   workflow_dispatch:
+    inputs:
+      force-build:
+        type: boolean
+        description: Force build (even if registry already up to date)
   push:
     branches:
       - main
@@ -51,22 +55,43 @@ jobs:
       - name: Check if version already has been built in the last month
         run: |
           BUILD='true'
-          VERSION_DATETIME=$(curl -s https://registry.hub.docker.com/v2/repositories/thexaf/hydroqc2mqtt/tags | \
-            jq -r '.results | map(select(.name == "${{ env.VERSION }}")) | map(.tag_last_pushed) | .[]')
+          if [ "${{ github.event.inputs.force-build }}" != "true" ]; then
+            VERSION_DATETIME=$(curl -s https://registry.hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags | \
+              jq -r '.results | map(select(.name == "${{ env.VERSION }}")) | map(.tag_last_pushed) | .[]')
 
-          if [ -n "$VERSION_DATETIME" ]; then
-            echo "Version was previously pushed at ${VERSION_DATETIME}"
+            if [ -n "$VERSION_DATETIME" ]; then
+              echo "Version was previously pushed at ${VERSION_DATETIME}"
 
-            EXPIRE_AFTER=$((60 * 60 * 24 * 30))
-            VERSION_TIMESTAMP=$(date -d "${VERSION_DATETIME}" +%s)
-            NOW_TIMESTAMP=$(date +%s)
+              EXPIRE_AFTER=$((60 * 60 * 24 * 30))
+              VERSION_TIMESTAMP=$(date -d "${VERSION_DATETIME}" +%s)
+              NOW_TIMESTAMP=$(date +%s)
 
-            if [ $(($NOW_TIMESTAMP - $VERSION_TIMESTAMP)) -le $EXPIRE_AFTER ]; then
-              BUILD='false'
+              if [ $(($NOW_TIMESTAMP - $VERSION_TIMESTAMP)) -le $EXPIRE_AFTER ]; then
+                BUILD='false'
+              fi
             fi
           fi
 
           echo "BUILD=${BUILD}" | tee -a "$GITHUB_ENV"
+
+      - name: Skip scheduled work if last build has not succeeded
+        if: github.event_name == 'schedule'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LAST_RUN_SUCCEEDED=$(\
+            curl -H "Bearer ${GITHUB_TOKEN}" \
+              https://api.github.com/repos/XaF/qolsysgw/actions/runs 2>/dev/null | \
+            jq '.workflow_runs |
+                map(select(.name == "${{ github.workflow }}" and .head_branch == "main")) |
+                first |
+                .conclusion == "success"'
+          )
+
+          if [ "$LAST_RUN_SUCCEEDED" != "true" ]; then
+            echo "Skipping build as last run has not succeeded"
+            echo "BUILD=false" | tee -a "$GITHUB_ENV"
+          fi
 
   build-and-push:
     name: Build and push
@@ -94,6 +119,9 @@ jobs:
           git remote add source "${{ env.REMOTE_REPOSITORY }}"
           git fetch source refs/tags/${{ env.VERSION }}:refs/tags/${{ env.VERSION }}
           git checkout ${{ env.VERSION }}
+
+          # Override Dockerfile
+          git show main:Dockerfile > Dockerfile
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
@@ -125,8 +153,6 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: |
-            linux/amd64
-            linux/386
             linux/arm64
             linux/arm/v7
           push: true
