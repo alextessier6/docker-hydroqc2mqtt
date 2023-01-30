@@ -31,6 +31,9 @@ jobs:
       version: ${{ env.VERSION }}
       build: ${{ env.BUILD }}
 
+    permissions:
+      actions: read
+
     steps:
       - name: Prepare image name
         run: |
@@ -75,12 +78,12 @@ jobs:
           echo "BUILD=${BUILD}" | tee -a "$GITHUB_ENV"
 
       - name: Skip scheduled work if last build has not succeeded
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' && env.BUILD == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           LAST_RUN_SUCCEEDED=$(\
-            curl -H "Bearer ${GITHUB_TOKEN}" \
+            curl -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               "https://api.github.com/repos/${{ github.repository }}/actions/runs" 2>/dev/null | \
             jq '.workflow_runs |
                 map(select(.name == "${{ github.workflow }}" and .head_branch == "main")) |
