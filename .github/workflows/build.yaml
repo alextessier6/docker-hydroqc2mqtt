@@ -81,7 +81,7 @@ jobs:
         run: |
           LAST_RUN_SUCCEEDED=$(\
             curl -H "Bearer ${GITHUB_TOKEN}" \
-              https://api.github.com/repos/XaF/qolsysgw/actions/runs 2>/dev/null | \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs" 2>/dev/null | \
             jq '.workflow_runs |
                 map(select(.name == "${{ github.workflow }}" and .head_branch == "main")) |
                 first |
