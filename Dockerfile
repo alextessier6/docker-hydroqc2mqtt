@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION
 
 
 FROM debian:testing-slim as base-image
@@ -43,7 +43,7 @@ ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
 ENV DISTRIBUTION_NAME=HYDROQC2MQTT
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_HYDROQC2MQTT=${HYDROQC2MQTT_VERSION}
 
-RUN python${PYTHON_VERSION%%.*} -m venv /opt/venv
+RUN python${PYTHON_VERSION} -m venv /opt/venv
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     curl https://sh.rustup.rs -sSf | \

@@ -97,12 +97,16 @@ jobs:
             echo "BUILD=false" | tee -a "$GITHUB_ENV"
           fi
 
-      - name: Find python version to use
+      - name: Find python version and base image sha
         if: env.BUILD == 'true'
         run: |
-          PYTHON_VERSION=$(\
+          DOCKERFILE=$(\
             curl -s \
-              "https://gitlab.com/hydroqc/hydroqc-base-container/-/raw/main/build/Dockerfile" | \
+              "https://gitlab.com/hydroqc/hydroqc-base-container/-/raw/main/build/Dockerfile" \
+          )
+
+          PYTHON_VERSION=$(\
+            echo "$DOCKERFILE" | \
             grep '^\s*python[0-9.]*\s*\\$' | \
             grep -o '[0-9.]*' \
           )
@@ -183,3 +187,5 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             HYDROQC2MQTT_VERSION=${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
