@@ -1,10 +1,15 @@
+ARG PYTHON_VERSION=3.10
+
+
 FROM debian:testing-slim as base-image
+
+ARG PYTHON_VERSION
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-        python3 \
-        python3-venv \
-        python3-pip \
+        python${PYTHON_VERSION} \
+        python${PYTHON_VERSION}-venv \
+        python${PYTHON_VERSION%%.*}-pip \
         curl \
         && \
     apt-get clean
@@ -13,11 +18,12 @@ RUN apt-get update && \
 
 FROM base-image as build-image
 
+ARG PYTHON_VERSION
 ARG HYDROQC2MQTT_VERSION
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-        python3-dev \
+        python${PYTHON_VERSION}-dev \
         libffi-dev \
         gcc \
         build-essential \
@@ -37,7 +43,7 @@ ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
 ENV DISTRIBUTION_NAME=HYDROQC2MQTT
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_HYDROQC2MQTT=${HYDROQC2MQTT_VERSION}
 
-RUN python3 -m venv /opt/venv
+RUN python${PYTHON_VERSION%%.*} -m venv /opt/venv
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     curl https://sh.rustup.rs -sSf | \
