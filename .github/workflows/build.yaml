@@ -30,6 +30,7 @@ jobs:
       image_name: ${{ env.IMAGE_NAME }}
       version: ${{ env.VERSION }}
       build: ${{ env.BUILD }}
+      python_version: ${{ env.PYTHON_VERSION }}
 
     permissions:
       actions: read
@@ -96,6 +97,23 @@ jobs:
             echo "BUILD=false" | tee -a "$GITHUB_ENV"
           fi
 
+      - name: Find python version to use
+        if: env.BUILD == 'true'
+        run: |
+          PYTHON_VERSION=$(\
+            curl -s \
+              "https://gitlab.com/hydroqc/hydroqc-base-container/-/raw/main/build/Dockerfile" | \
+            grep '^\s*python[0-9.]*\s*\\$' | \
+            grep -o '[0-9.]*' \
+          )
+
+          if [ -z "$PYTHON_VERSION" ]; then
+            echo "Unable to find python version"
+            exit 1
+          fi
+
+          echo "PYTHON_VERSION=${PYTHON_VERSION}" | tee -a "$GITHUB_ENV"
+
   build-and-push:
     name: Build and push
     runs-on: ubuntu-latest
@@ -112,6 +130,7 @@ jobs:
     env:
       IMAGE_NAME: ${{ needs.prepare-environment.outputs.image_name }}
       VERSION: ${{ needs.prepare-environment.outputs.version }}
+      PYTHON_VERSION: ${{ needs.prepare-environment.outputs.python_version }}
 
     steps:
       - name: Checkout current repo
@@ -161,4 +180,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: HYDROQC2MQTT_VERSION=${{ env.VERSION }}
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            HYDROQC2MQTT_VERSION=${{ env.VERSION }}
