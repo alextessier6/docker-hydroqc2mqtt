@@ -11,6 +11,7 @@ RUN apt-get update && \
         python${PYTHON_VERSION}-venv \
         python${PYTHON_VERSION%%.*}-pip \
         curl \
+        ca-certificates \
         && \
     apt-get clean
 
@@ -29,6 +30,7 @@ RUN apt-get update && \
         build-essential \
         libssl-dev \
         cargo \
+        pkg-config \
         && \
     apt-get clean
 
@@ -61,7 +63,8 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     pip install --no-cache-dir .
 
 RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir msgpack ujson
+    pip install --no-cache-dir msgpack ujson aiohttp && \
+    pip install --upgrade certifi
 
 
 
