@@ -30,7 +30,6 @@ jobs:
       image_name: ${{ env.IMAGE_NAME }}
       version: ${{ env.VERSION }}
       build: ${{ env.BUILD }}
-      python_version: ${{ env.PYTHON_VERSION }}
 
     permissions:
       actions: read
@@ -97,26 +96,6 @@ jobs:
             echo "BUILD=false" | tee -a "$GITHUB_ENV"
           fi
 
-      # - name: Find python version and base image sha
-        # if: env.BUILD == 'true'
-        # run: |
-          # DOCKERFILE=$(\
-            # curl -s \
-              # "https://gitlab.com/hydroqc/hydroqc-base-container/-/raw/main/build/Dockerfile" \
-          # )
-
-          # PYTHON_VERSION=$(\
-            # echo "$DOCKERFILE" | \
-            # grep '^\s*python[0-9.]*\s*\\$' | \
-            # grep -o '[0-9.]*' \
-          # )
-
-          # if [ -z "$PYTHON_VERSION" ]; then
-            # echo "Unable to find python version"
-            # exit 1
-          # fi
-
-          # echo "PYTHON_VERSION=${PYTHON_VERSION}" | tee -a "$GITHUB_ENV"
 
   build-and-push:
     name: Build and push
@@ -134,7 +113,6 @@ jobs:
     env:
       IMAGE_NAME: ${{ needs.prepare-environment.outputs.image_name }}
       VERSION: ${{ needs.prepare-environment.outputs.version }}
-      # PYTHON_VERSION: ${{ needs.prepare-environment.outputs.python_version }}
 
     steps:
       - name: Checkout current repo
@@ -145,9 +123,6 @@ jobs:
           git remote add source "${{ env.REMOTE_REPOSITORY }}"
           git fetch source refs/tags/${{ env.VERSION }}:refs/tags/${{ env.VERSION }}
           git checkout ${{ env.VERSION }}
-
-          # Override Dockerfile
-          git show main:Dockerfile > Dockerfile
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
@@ -175,8 +150,6 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
-        env:
-          PYTHON_VERSION: 3.11
         with:
           context: .
           file: ./Dockerfile
@@ -186,7 +159,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             HYDROQC2MQTT_VERSION=${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
