@@ -97,26 +97,26 @@ jobs:
             echo "BUILD=false" | tee -a "$GITHUB_ENV"
           fi
 
-      - name: Find python version and base image sha
-        if: env.BUILD == 'true'
-        run: |
-          DOCKERFILE=$(\
-            curl -s \
-              "https://gitlab.com/hydroqc/hydroqc-base-container/-/raw/main/build/Dockerfile" \
-          )
+      # - name: Find python version and base image sha
+        # if: env.BUILD == 'true'
+        # run: |
+          # DOCKERFILE=$(\
+            # curl -s \
+              # "https://gitlab.com/hydroqc/hydroqc-base-container/-/raw/main/build/Dockerfile" \
+          # )
 
-          PYTHON_VERSION=$(\
-            echo "$DOCKERFILE" | \
-            grep '^\s*python[0-9.]*\s*\\$' | \
-            grep -o '[0-9.]*' \
-          )
+          # PYTHON_VERSION=$(\
+            # echo "$DOCKERFILE" | \
+            # grep '^\s*python[0-9.]*\s*\\$' | \
+            # grep -o '[0-9.]*' \
+          # )
 
-          if [ -z "$PYTHON_VERSION" ]; then
-            echo "Unable to find python version"
-            exit 1
-          fi
+          # if [ -z "$PYTHON_VERSION" ]; then
+            # echo "Unable to find python version"
+            # exit 1
+          # fi
 
-          echo "PYTHON_VERSION=${PYTHON_VERSION}" | tee -a "$GITHUB_ENV"
+          # echo "PYTHON_VERSION=${PYTHON_VERSION}" | tee -a "$GITHUB_ENV"
 
   build-and-push:
     name: Build and push
@@ -134,7 +134,7 @@ jobs:
     env:
       IMAGE_NAME: ${{ needs.prepare-environment.outputs.image_name }}
       VERSION: ${{ needs.prepare-environment.outputs.version }}
-      PYTHON_VERSION: ${{ needs.prepare-environment.outputs.python_version }}
+      # PYTHON_VERSION: ${{ needs.prepare-environment.outputs.python_version }}
 
     steps:
       - name: Checkout current repo
@@ -147,7 +147,7 @@ jobs:
           git checkout ${{ env.VERSION }}
 
           # Override Dockerfile
-          git show main:Dockerfile > Dockerfile
+          # git show main:Dockerfile > Dockerfile
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
