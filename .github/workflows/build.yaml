@@ -110,7 +110,7 @@ jobs:
         run: |
           git init >/dev/null 2>&1
           git remote add source-base "${{ env.BASE_IMAGE_REMOTE_REPOSITORY }}" >/dev/null 2>&1
-          BASE_IMAGE_VERSION=$(git ls-remote --exit-code source-base HEAD | aws '{ print $1 }')
+          BASE_IMAGE_VERSION=$(git ls-remote --exit-code source-base HEAD | awk '{ print $1 }')
 
           if [ -z "$BASE_IMAGE_VERSION" ]; then
             echo "Unable to find base image version"
