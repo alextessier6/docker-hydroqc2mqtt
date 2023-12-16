@@ -108,9 +108,9 @@ jobs:
 
       - name: Find required base image version
         run: |
-          BASE_IMAGE_VERSION=$(
-            curl -s https://gitlab.com/hydroqc/hydroqc2mqtt/-/raw/main/Dockerfile?ref_type=heads | head -n1 |
-            sed -r 's/.*@sha256:([^ ]*).*/\1/g')
+          git init >/dev/null 2>&1
+          git remote add source-base "${{ env.BASE_IMAGE_REMOTE_REPOSITORY }}" >/dev/null 2>&1
+          BASE_IMAGE_VERSION=$(git ls-remote --exit-code source-base HEAD | aws '{ print $1 }')
 
           if [ -z "$BASE_IMAGE_VERSION" ]; then
             echo "Unable to find base image version"
@@ -160,7 +160,7 @@ jobs:
       - name: Checkout version from source
         run: |
           git remote add source "${{ env.BASE_IMAGE_REMOTE_REPOSITORY }}"
-          git fetch source
+          git fetch source ${{ env.BASE_IMAGE_VERSION }}
           git checkout ${{ env.BASE_IMAGE_VERSION }}
 
       - name: Log in to the Container registry
@@ -227,7 +227,7 @@ jobs:
           git checkout ${{ env.VERSION }}
 
           # Replace the base image
-          sed -i 's#registry.gitlab.com/hydroqc/hydroqc-base-container/3.11:latest@sha256:#thexaf/hydroqc-base-container:#g' Dockerfile
+          sed -i 's#registry.gitlab.com/hydroqc/hydroqc-base-container/3.11:latest@sha256:[^ ]*#thexaf/hydroqc-base-container:${{ env.BASE_IMAGE_VERSION }}#g' Dockerfile
 
           # Check the diff
           git diff
