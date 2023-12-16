@@ -189,7 +189,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./Dockerfile
+          file: ./build/Dockerfile
           platforms: |
             linux/arm/v7
           push: true
