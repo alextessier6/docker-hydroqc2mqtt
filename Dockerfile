@@ -1,30 +1,22 @@
-ARG PYTHON_VERSION
-
-
 FROM debian:testing-slim as base-image
-
-ARG PYTHON_VERSION
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-        python${PYTHON_VERSION} \
-        python${PYTHON_VERSION}-venv \
-        python${PYTHON_VERSION%%.*}-pip \
-        curl \
+        python3.11 \
         ca-certificates \
+        python3.11-venv \
+        python3-pip \
+        curl \
         && \
     apt-get clean
 
-
-
 FROM base-image as build-image
 
-ARG PYTHON_VERSION
 ARG HYDROQC2MQTT_VERSION
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-        python${PYTHON_VERSION}-dev \
+        python3.11-dev \
         libffi-dev \
         gcc \
         build-essential \
@@ -33,7 +25,6 @@ RUN apt-get update && \
         pkg-config \
         && \
     apt-get clean
-
 WORKDIR /usr/src/app
 
 COPY setup.cfg pyproject.toml /usr/src/app/
@@ -45,7 +36,7 @@ ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
 ENV DISTRIBUTION_NAME=HYDROQC2MQTT
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_HYDROQC2MQTT=${HYDROQC2MQTT_VERSION}
 
-RUN python${PYTHON_VERSION} -m venv /opt/venv
+RUN python3.11 -m venv /opt/venv
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     curl https://sh.rustup.rs -sSf | \
@@ -53,7 +44,7 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     export PATH="/root/.cargo/bin:${PATH}"
 
 RUN if [ `dpkg --print-architecture` = "armhf" ]; then \
-        printf "[global]\nextra-index-url=https://www.piwheels.org/simple\n" > /etc/pip.conf ; \
+       printf "[global]\nextra-index-url=https://www.piwheels.org/simple\n" > /etc/pip.conf ; \
     fi
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
@@ -63,13 +54,10 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     pip install --no-cache-dir .
 
 RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir msgpack ujson aiohttp && \
-    pip install --upgrade certifi
-
+    pip install --no-cache-dir msgpack ujson
 
 
 FROM base-image
-
 COPY --from=build-image /opt/venv /opt/venv
 COPY --from=build-image /usr/src/app/hydroqc2mqtt /usr/src/app/hydroqc2mqtt
 COPY --from=build-image /opt/venv/bin/hydroqc2mqtt /opt/venv/bin/hydroqc2mqtt
