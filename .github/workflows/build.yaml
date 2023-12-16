@@ -160,7 +160,7 @@ jobs:
       - name: Checkout version from source
         run: |
           git remote add source "${{ env.BASE_IMAGE_REMOTE_REPOSITORY }}"
-          git fetch source ${{ env.BASE_IMAGE_VERSION }}
+          git fetch source
           git checkout ${{ env.BASE_IMAGE_VERSION }}
 
       - name: Log in to the Container registry
