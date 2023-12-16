@@ -150,8 +150,8 @@ jobs:
       packages: write
 
     env:
-      IMAGE_NAME: ${{ needs.prepare-environment.outputs.base_image_name }}
-      VERSION: ${{ needs.prepare-environment.outputs.base_image_version }}
+      BASE_IMAGE_NAME: ${{ needs.prepare-environment.outputs.base_image_name }}
+      BASE_IMAGE_VERSION: ${{ needs.prepare-environment.outputs.base_image_version }}
 
     steps:
       - name: Checkout current repo
