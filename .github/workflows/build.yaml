@@ -87,24 +87,24 @@ jobs:
 
           echo "BUILD=${BUILD}" | tee -a "$GITHUB_ENV"
 
-      - name: Skip scheduled work if last build has not succeeded
-        if: github.event_name == 'schedule' && env.BUILD == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          LAST_RUN_SUCCEEDED=$(\
-            curl -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/runs" 2>/dev/null | \
-            jq '.workflow_runs |
-                map(select(.name == "${{ github.workflow }}" and .head_branch == "main")) |
-                first |
-                .conclusion == "success"'
-          )
+      # - name: Skip scheduled work if last build has not succeeded
+      #   if: github.event_name == 'schedule' && env.BUILD == 'true'
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     LAST_RUN_SUCCEEDED=$(\
+      #       curl -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      #         "https://api.github.com/repos/${{ github.repository }}/actions/runs" 2>/dev/null | \
+      #       jq '.workflow_runs |
+      #           map(select(.name == "${{ github.workflow }}" and .head_branch == "main")) |
+      #           first |
+      #           .conclusion == "success"'
+      #     )
 
-          if [ "$LAST_RUN_SUCCEEDED" != "true" ]; then
-            echo "Skipping build as last run has not succeeded"
-            echo "BUILD=false" | tee -a "$GITHUB_ENV"
-          fi
+      #     if [ "$LAST_RUN_SUCCEEDED" != "true" ]; then
+      #       echo "Skipping build as last run has not succeeded"
+      #       echo "BUILD=false" | tee -a "$GITHUB_ENV"
+      #     fi
 
       # - name: Find required base image version
         # run: |
