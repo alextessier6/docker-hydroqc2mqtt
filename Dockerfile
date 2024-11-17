@@ -21,18 +21,7 @@ RUN apt-get -qq update  \
         /var/lib/apt/lists/* \
         /var/cache/apt/* \
         /var/tmp/*
-RUN pip config set global.extra-index-url https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple \
-    && pip install --upgrade --no-cache-dir \
-        uv \
-        pip \
-    && uv pip install --system --upgrade --no-cache-dir \
-        tox \
-        twine \
-    && \
-    rm -rf \
-        /root/.cache \
-        /root/.cargo \
-        /tmp/*
+
 ENV TZ="America/Toronto"
 
 
@@ -67,12 +56,18 @@ RUN if [ `dpkg --print-architecture` = "armhf" ]; then \
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     . /opt/venv/bin/activate && \
+    pip config set global.extra-index-url https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple && \
     pip install --upgrade pip && \
+    pip install --system --upgrade --no-cache-dir tox twine && \
     pip install --upgrade setuptools_scm && \
-    pip install --no-cache-dir .
-
-RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir msgpack ujson
+    pip install --no-cache-dir . && \
+    rm -rf \
+        /root/.cache \
+        /root/.cargo \
+        /tmp/*
+        
+# RUN . /opt/venv/bin/activate && \
+#     pip install --no-cache-dir msgpack ujson
 
 
 FROM python:3.12-slim-bookworm
