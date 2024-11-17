@@ -47,6 +47,12 @@ RUN python3.12 -m venv /opt/venv
 RUN --mount=type=tmpfs,target=/root/.cargo \
     curl https://sh.rustup.rs -sSf | \
     RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y && \
+    export PATH="/root/.cargo/bin:${PATH}" && \
+    /root/.cargo/bin/rustup update
+
+RUN --mount=type=tmpfs,target=/root/.cargo \
+    curl https://sh.rustup.rs -sSf | \
+    RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y && \
     export PATH="/root/.cargo/bin:${PATH}"
 
 RUN if [ `dpkg --print-architecture` = "armhf" ]; then \
