@@ -57,11 +57,7 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     pip install --upgrade pip && \
     pip install --upgrade --no-cache-dir tox twine && \
     pip install --upgrade setuptools_scm && \
-    pip install --no-cache-dir . && \
-    rm -rf \
-        /root/.cache \
-        /root/.cargo \
-        /tmp/*
+    pip install --no-cache-dir .
         
 # RUN . /opt/venv/bin/activate && \
 #     pip install --no-cache-dir msgpack ujson
