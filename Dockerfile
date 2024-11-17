@@ -3,7 +3,6 @@ FROM python:3.12.6-bookworm as base-image
 RUN apt-get -qq update  \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
-        cargo \
         curl \
         ca-certificates \
         gcc \
