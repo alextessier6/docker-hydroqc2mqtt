@@ -43,22 +43,15 @@ ENV UV_NO_CACHE=true
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3.12 -m venv /opt/venv
 
-RUN --mount=type=tmpfs,target=/root/.cargo \
-    curl https://sh.rustup.rs -sSf | \
-    RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y && \
-    export PATH="/root/.cargo/bin:$PATH"
-
-ENV PATH=/root/.cargo/bin:$PATH
-
-RUN --mount=type=tmpfs,target=/root/.cargo \
-    export PATH=/root/.cargo/bin:$PATH && \
-    rustc --version
 
 RUN if [ `dpkg --print-architecture` = "armhf" ]; then \
        printf "[global]\nextra-index-url=https://www.piwheels.org/simple\n" > /etc/pip.conf ; \
     fi
-
+    
 RUN --mount=type=tmpfs,target=/root/.cargo \
+    curl https://sh.rustup.rs -sSf | \
+    RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y && \
+    export PATH="/root/.cargo/bin:$PATH" && \
     . /opt/venv/bin/activate && \
     pip config set global.extra-index-url https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple && \
     pip install --upgrade pip && \
