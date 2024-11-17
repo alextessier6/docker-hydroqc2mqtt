@@ -9,15 +9,15 @@ on:
   push:
     branches:
       - main
-  schedule:
-    - cron: '12 23 * * *'
+  # schedule:
+  #   - cron: '12 23 * * *'
 
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
 env:
-  REGISTRY_USERNAME: thexaf
+  REGISTRY_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
   IMAGE_NAME: ${{ github.repository }}
   BASE_IMAGE_NAME: hydroqc-base-container
   REMOTE_REPOSITORY: https://gitlab.com/hydroqc/hydroqc2mqtt
