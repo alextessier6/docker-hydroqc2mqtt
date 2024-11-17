@@ -1,30 +1,45 @@
-FROM debian:testing-slim as base-image
+FROM python:3.12.6-bookworm as base-image
 
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-        python3.11 \
-        ca-certificates \
-        python3.11-venv \
-        python3-pip \
+RUN apt-get -qq update  \
+    && apt-get upgrade -y \
+    && apt-get install --no-install-recommends -y \
+        cargo \
         curl \
-        && \
-    apt-get clean
+        ca-certificates \
+        gcc \
+        git \
+        graphviz \
+        jq \
+        unzip \
+        rsync \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && \
+    rm -rf \
+        /tmp/* \
+        /var/lib/apt/lists/* \
+        /var/cache/apt/* \
+        /var/tmp/*
+RUN pip config set global.extra-index-url https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple \
+    && pip install --upgrade --no-cache-dir \
+        uv \
+        pip \
+    && uv pip install --system --upgrade --no-cache-dir \
+        tox \
+        twine \
+    && \
+    rm -rf \
+        /root/.cache \
+        /root/.cargo \
+        /tmp/*
+ENV TZ="America/Toronto"
+
 
 FROM base-image as build-image
 
 ARG HYDROQC2MQTT_VERSION
 
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-        python3.11-dev \
-        libffi-dev \
-        gcc \
-        build-essential \
-        libssl-dev \
-        cargo \
-        pkg-config \
-        && \
-    apt-get clean
 WORKDIR /usr/src/app
 
 COPY setup.cfg pyproject.toml /usr/src/app/
@@ -35,8 +50,11 @@ ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
 
 ENV DISTRIBUTION_NAME=HYDROQC2MQTT
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_HYDROQC2MQTT=${HYDROQC2MQTT_VERSION}
+ENV UV_NO_CACHE=true
 
-RUN python3.11 -m venv /opt/venv
+RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3.12 -m venv /opt/venv
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     curl https://sh.rustup.rs -sSf | \
@@ -57,10 +75,21 @@ RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir msgpack ujson
 
 
-FROM base-image
-COPY --from=build-image /opt/venv /opt/venv
-COPY --from=build-image /usr/src/app/hydroqc2mqtt /usr/src/app/hydroqc2mqtt
-COPY --from=build-image /opt/venv/bin/hydroqc2mqtt /opt/venv/bin/hydroqc2mqtt
+FROM python:3.12-slim-bookworm
+
+COPY --from=build-image /opt/venv/pyvenv.cfg /opt/venv/pyvenv.cfg
+COPY --from=build-image /opt/venv/lib /opt/venv/lib
+COPY --from=build-image /opt/venv/bin /opt/venv/bin
+
+RUN \
+    adduser hq2m \
+        --uid 568 \
+        --group \
+        --system \
+        --disabled-password \
+        --no-create-home
+
+USER hq2m
 
 ENV PATH="/opt/venv/bin:$PATH"
 ENV TZ="America/Toronto" \
@@ -69,3 +98,4 @@ ENV TZ="America/Toronto" \
     SYNC_FREQUENCY=600
 
 CMD [ "/opt/venv/bin/hydroqc2mqtt" ]
+
