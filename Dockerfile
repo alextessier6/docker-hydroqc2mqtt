@@ -57,7 +57,7 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     . /opt/venv/bin/activate && \
     pip config set global.extra-index-url https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple && \
     pip install --upgrade pip && \
-    pip install --system --upgrade --no-cache-dir tox twine && \
+    pip install --upgrade --no-cache-dir tox twine && \
     pip install --upgrade setuptools_scm && \
     pip install --no-cache-dir . && \
     rm -rf \
