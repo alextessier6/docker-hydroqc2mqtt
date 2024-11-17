@@ -48,7 +48,7 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y && \
     export PATH="/root/.cargo/bin:$PATH"
 
-SHELL ["/bin/sh", "-c"]
+ENV PATH=/root/.cargo/bin:$PATH
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     rustc --version
