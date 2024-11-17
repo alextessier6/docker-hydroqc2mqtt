@@ -50,7 +50,7 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     export PATH="/root/.cargo/bin:${PATH}"
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
-    /root/.cargo/bin/rustup update
+    rustc --version
 
 RUN if [ `dpkg --print-architecture` = "armhf" ]; then \
        printf "[global]\nextra-index-url=https://www.piwheels.org/simple\n" > /etc/pip.conf ; \
