@@ -47,7 +47,8 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
     curl https://sh.rustup.rs -sSf | \
     RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y
 
-ENV PATH="/root/.cargo/bin:${PATH}" 
+ENV --mount=type=tmpfs,target=/root/.cargo \
+    PATH="/root/.cargo/bin:${PATH}" 
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
     rustc --version
