@@ -51,6 +51,7 @@ RUN --mount=type=tmpfs,target=/root/.cargo \
 ENV PATH=/root/.cargo/bin:$PATH
 
 RUN --mount=type=tmpfs,target=/root/.cargo \
+    export PATH=/root/.cargo/bin:$PATH && \
     rustc --version
 
 RUN if [ `dpkg --print-architecture` = "armhf" ]; then \
